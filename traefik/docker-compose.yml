@@ -5,19 +5,14 @@ services:
     image: traefik:v3.1
 
     command:
-      # 日志
       - "--log.level=INFO"
-
-      # Dashboard
-      - "--api.dashboard=true"
-      - "--api.insecure=false"
 
       # EntryPoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.metrics.address=:8082"
 
-      # 自动 HTTPS 跳转
+      # HTTPS redirect
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
 
@@ -29,18 +24,21 @@ services:
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
 
-      # ACME（Let’s Encrypt）
-      - "--certificatesresolvers.le.acme.email=admin@yourdomain.com"
-      - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
-      - "--certificatesresolvers.le.acme.dnschallenge=true"
-      - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
+      # Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
 
       # Metrics
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entrypoint=metrics"
 
-      # Health
-      - "--ping=true"
+      # ===== ACME（关键）=====
+      - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
+      - "--certificatesresolvers.le.acme.dnschallenge=true"
+      - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
+
+      # ACME 使用 Consul 作为存储
+      - "--certificatesresolvers.le.acme.storage=consul://consul:8500/traefik/acme"
 
     ports:
       - target: 80
@@ -53,20 +51,17 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./dynamic:/etc/traefik/dynamic:ro
-      - traefik-acme:/acme
+
+    environment:
+      - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
 
     secrets:
       - cf_dns_api_token
       - traefik-dashboard-users
 
-    environment:
-      - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
-
     deploy:
       mode: global
-      placement:
-        constraints:
-          - node.role == manager
+
 
     networks:
       - traefik-net
@@ -77,9 +72,6 @@ secrets:
   traefik-dashboard-users:
     external: true
 
-volumes:
-  traefik-acme:
-
 networks:
   traefik-net:
-    driver: overlay
+    external: true
