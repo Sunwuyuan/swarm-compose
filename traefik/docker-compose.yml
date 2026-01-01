@@ -127,11 +127,6 @@ networks:
     driver: overlay
     attachable: true
 
+
 volumes:
   redis-data:
-
-secrets:
-  traefik-dashboard-users:
-    external: true
-  cf_dns_api_token:
-    external: true
