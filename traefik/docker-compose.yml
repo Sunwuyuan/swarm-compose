@@ -18,7 +18,6 @@ services:
       # Providers
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      # v3 中 swarmMode 被移除，使用 swarm provider
       - "--providers.swarm=true"
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
@@ -31,11 +30,11 @@ services:
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entrypoint=metrics"
 
-      # ACME（使用 DNS + Consul 存储）
+      # ACME（使用 DNS + Redis 单节点存储）
       - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
       - "--certificatesresolvers.le.acme.dnschallenge=true"
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
-      - "--certificatesresolvers.le.acme.storage=consul://consul:8500/traefik/acme"
+      - "--certificatesresolvers.le.acme.storage=redis://redis:6379/0"
 
     ports:
       - target: 80
@@ -58,8 +57,6 @@ services:
 
     deploy:
       mode: global
-      # 这里不加 constraints，让 Traefik 在所有节点部署（Manager + Worker）
-      # 如果希望 Manager 节点和 Worker 节点都部署，可省略 constraints
       update_config:
         parallelism: 1
         delay: 10s
@@ -71,6 +68,20 @@ services:
 
     networks:
       - traefik-net
+      - redis-net
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - redis-net
+    deploy:
+      mode: replicated
+      replicas: 1   # 单节点
+      restart_policy:
+        condition: on-failure
 
 configs:
   traefik-dynamic:
@@ -85,3 +96,8 @@ secrets:
 networks:
   traefik-net:
     external: true
+  redis-net:
+    driver: overlay
+
+volumes:
+  redis-data:
