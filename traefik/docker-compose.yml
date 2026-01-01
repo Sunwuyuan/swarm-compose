@@ -36,6 +36,8 @@ services:
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
       - "--certificatesresolvers.le.acme.storage=redis://redis:6379/0"
 
+      - "--log.level=DEBUG"
+
     ports:
       - target: 80
         published: 80
