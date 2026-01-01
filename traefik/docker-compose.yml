@@ -1,24 +1,38 @@
-# docker-compose.yml 最终修复版
+version: "3.8"
+
 services:
   traefik:
     image: traefik:v3.6.6
+
     command:
       - "--log.level=DEBUG"
+
+      # EntryPoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+
+      # HTTP → HTTPS 重定向
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+      # Providers
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.swarm=true"
+
+      # Dashboard
       - "--api.dashboard=true"
       - "--api.insecure=false"
+
+      # Let's Encrypt（HTTP-01）
       - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
-      - "--certificatesresolvers.le.acme.dnschallenge=true"
-      - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
-      # ✅ 关键修改：改用文件存储
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+
+      # 证书存储（文件）
       - "--certificatesresolvers.le.acme.storage=/acme.json"
-      # 先用 Let's Encrypt 测试环境
+
+      # 测试环境（确认没问题后建议删掉）
       - "--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
 
     ports:
@@ -31,24 +45,29 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /opt/1panel/docker/compose/traefik/acme.json:/acme.json  # ✅ 新增
+      - /opt/1panel/docker/compose/traefik/acme.json:/acme.json
 
     secrets:
-      - cf_dns_api_token-1
       - traefik-dashboard-users
 
     deploy:
       mode: global
       labels:
         - "traefik.enable=true"
+
+        # HTTP Router（用于 ACME + 跳转）
         - "traefik.http.routers.traefik-http.rule=Host(`traefik.swarm.wuyuan.dev`)"
         - "traefik.http.routers.traefik-http.entrypoints=web"
         - "traefik.http.routers.traefik-http.middlewares=redirect-to-https"
+
+        # HTTPS Router
         - "traefik.http.routers.traefik-https.rule=Host(`traefik.swarm.wuyuan.dev`)"
         - "traefik.http.routers.traefik-https.entrypoints=websecure"
         - "traefik.http.routers.traefik-https.service=api@internal"
         - "traefik.http.routers.traefik-https.tls.certresolver=le"
         - "traefik.http.routers.traefik-https.middlewares=dashboard-auth"
+
+        # Middlewares
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
         - "traefik.http.middlewares.dashboard-auth.basicauth.usersfile=/run/secrets/traefik-dashboard-users"
@@ -59,6 +78,3 @@ services:
 networks:
   traefik-net:
     external: true
-
-volumes:
-  redis-data:  # 暂时保留，但 Traefik 不再使用
