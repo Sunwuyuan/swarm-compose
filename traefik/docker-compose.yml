@@ -4,14 +4,14 @@ services:
   traefik:
     image: traefik:v3.6.6
     command:
-      - "--log.level=INFO"
+      - "--log.level=DEBUG"  # 保留 DEBUG 以便排查
 
       # EntryPoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.metrics.address=:8082"
 
-      # HTTPS redirect
+      # HTTPS 重定向
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
 
@@ -24,19 +24,18 @@ services:
 
       # Dashboard
       - "--api.dashboard=true"
-      - "--api.insecure=false"
+      - "--api.insecure=false"  # 生产环境必须设为 false
 
       # Metrics
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entrypoint=metrics"
 
-      # ACME（使用 DNS + Redis 单节点存储）
+      # ACME（DNS Challenge）
       - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
       - "--certificatesresolvers.le.acme.dnschallenge=true"
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
       - "--certificatesresolvers.le.acme.storage=redis://redis:6379/0"
-
-      - "--log.level=DEBUG"
+      - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"  # 新增：指定 DNS 解析
 
     ports:
       - target: 80
@@ -59,9 +58,34 @@ services:
 
     deploy:
       mode: global
+      labels:  # ✅ 关键修复：添加标签部分
+        # 启用 Traefik 自身
+        - "traefik.enable=true"
+
+        # HTTP 重定向中间件
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+
+        # Dashboard 路由（HTTP → HTTPS）
+        - "traefik.http.routers.traefik-http.rule=Host(`monitor.wuyuan.dev`)"
+        - "traefik.http.routers.traefik-http.entrypoints=web"
+        - "traefik.http.routers.traefik-http.middlewares=redirect-to-https"
+
+        # Dashboard 路由（HTTPS）
+        - "traefik.http.routers.traefik-https.rule=Host(`monitor.wuyuan.dev`)"
+        - "traefik.http.routers.traefik-https.entrypoints=websecure"
+        - "traefik.http.routers.traefik-https.tls.certresolver=le"  # ✅ 触发 ACME
+        - "traefik.http.routers.traefik-https.service=api@internal"
+        - "traefik.http.routers.traefik-https.middlewares=dashboard-auth"
+
+        # Dashboard 认证
+        - "traefik.http.middlewares.dashboard-auth.basicauth.usersfile=/run/secrets/traefik-dashboard-users"
+        - "traefik.http.middlewares.dashboard-auth.basicauth.removeheader=true"
+
       update_config:
         parallelism: 1
         delay: 10s
+        order: start-first
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -74,14 +98,23 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--save", "", "--appendonly", "yes"]
+    command: >
+      sh -c "redis-server --save '' --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru"
+    healthcheck:  # ✅ 新增：健康检查
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
     volumes:
       - redis-data:/data
     networks:
       - redis-net
     deploy:
       mode: replicated
-      replicas: 1   # 单节点
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager  # ✅ 固定到管理节点
       restart_policy:
         condition: on-failure
 
@@ -100,6 +133,7 @@ networks:
     external: true
   redis-net:
     driver: overlay
+    attachable: true  # ✅ 允许其他容器加入
 
 volumes:
   redis-data:
