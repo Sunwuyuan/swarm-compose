@@ -50,7 +50,6 @@ services:
 
     secrets:
       - cf_dns_api_token
-      - traefik-dashboard-users
 
     deploy:
       mode: global
@@ -73,7 +72,6 @@ services:
         # 中间件定义
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
-        - "traefik.http.middlewares.dashboard-auth.basicauth.usersfile=/run/secrets/traefik-dashboard-users"
 
         # 声明端口（可选，用于健康检查）
         - "traefik.http.services.traefik.loadbalancer.server.port=8080"
@@ -117,8 +115,7 @@ services:
 secrets:
   cf_dns_api_token:
     external: true
-  traefik-dashboard-users:
-    external: true
+
 
 networks:
   traefik-net:
