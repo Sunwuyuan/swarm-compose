@@ -3,17 +3,21 @@ version: "3.8"
 services:
   consul:
     image: hashicorp/consul:1.16
-    command: agent -server -bootstrap -ui -client=0.0.0.0
-
-    volumes:
-      - consul-data:/consul/data
-
+    command:
+      - "agent"
+      - "-server"
+      - "-bootstrap"
+      - "-ui"
+      - "-client=0.0.0.0"
+      - "-bind=0.0.0.0"
+      - "-advertise=$(hostname -i)"   # 容器内部动态获取 IP
     deploy:
       replicas: 1
       placement:
         constraints:
           - node.role == manager
-
+    volumes:
+      - consul-data:/consul/data
     networks:
       - traefik-net
 
