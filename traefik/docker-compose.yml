@@ -59,12 +59,12 @@ services:
         - "traefik.enable=true"
 
         # HTTP 到 HTTPS 重定向
-        - "traefik.http.routers.traefik-http.rule=Host(`traefik.192325.xyz`)"
+        - "traefik.http.routers.traefik-http.rule=Host(`traefik.swarm.192325.xyz`)"
         - "traefik.http.routers.traefik-http.entrypoints=web"
         - "traefik.http.routers.traefik-http.middlewares=redirect-to-https"
 
         # HTTPS 路由（Dashboard）
-        - "traefik.http.routers.traefik-https.rule=Host(`traefik.192325.xyz`)"
+        - "traefik.http.routers.traefik-https.rule=Host(`traefik.swarm.192325.xyz`)"
         - "traefik.http.routers.traefik-https.entrypoints=websecure"
         - "traefik.http.routers.traefik-https.service=api@internal"
         - "traefik.http.routers.traefik-https.tls.certresolver=le"  # ✅ 触发 ACME
