@@ -1,41 +1,25 @@
-version: "3.8"
-
+# docker-compose.yml 最终修复版
 services:
   traefik:
     image: traefik:v3.6.6
     command:
       - "--log.level=DEBUG"
-
-      # EntryPoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.metrics.address=:8082"
-
-      # HTTPS 重定向
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-
-      # Providers
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.swarm=true"
-      - "--providers.file.directory=/etc/traefik/dynamic"
-      - "--providers.file.watch=true"
-
-      # Dashboard
       - "--api.dashboard=true"
       - "--api.insecure=false"
-
-      # Metrics
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.entrypoint=metrics"
-
-      # ACME（Cloudflare DNS-01 + Redis 存储）
       - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
       - "--certificatesresolvers.le.acme.dnschallenge=true"
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
-      - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-      - "--certificatesresolvers.le.acme.storage=redis://redis:6379/0"
+      # ✅ 关键修改：改用文件存储
+      - "--certificatesresolvers.le.acme.storage=/acme.json"
+      # 先用 Let's Encrypt 测试环境
+      - "--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
 
     ports:
       - target: 80
@@ -47,6 +31,7 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/1panel/docker/compose/traefik/acme.json:/acme.json  # ✅ 新增
 
     secrets:
       - cf_dns_api_token
@@ -55,77 +40,25 @@ services:
     deploy:
       mode: global
       labels:
-        # ✅ 核心修复：启用 Traefik 自身服务
         - "traefik.enable=true"
-
-        # HTTP 到 HTTPS 重定向
         - "traefik.http.routers.traefik-http.rule=Host(`traefik.swarm.wuyuan.dev`)"
         - "traefik.http.routers.traefik-http.entrypoints=web"
         - "traefik.http.routers.traefik-http.middlewares=redirect-to-https"
-
-        # HTTPS 路由（Dashboard）
         - "traefik.http.routers.traefik-https.rule=Host(`traefik.swarm.wuyuan.dev`)"
         - "traefik.http.routers.traefik-https.entrypoints=websecure"
         - "traefik.http.routers.traefik-https.service=api@internal"
-        - "traefik.http.routers.traefik-https.tls.certresolver=le"  # ✅ 触发 ACME
+        - "traefik.http.routers.traefik-https.tls.certresolver=le"
         - "traefik.http.routers.traefik-https.middlewares=dashboard-auth"
-
-        # 中间件定义
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
         - "traefik.http.middlewares.dashboard-auth.basicauth.usersfile=/run/secrets/traefik-dashboard-users"
 
-        # 声明端口（可选，用于健康检查）
-        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
-
-      update_config:
-        parallelism: 1
-        delay: 10s
-        order: start-first
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 60s
-
     networks:
       - traefik-net
-      - redis-net
-
-  redis:
-    image: redis:7-alpine
-    command: >
-      sh -c "redis-server --save '' --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-    volumes:
-      - redis-data:/data
-    networks:
-      - redis-net
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager  # 固定到 Manager 节点
-      restart_policy:
-        condition: on-failure
-
-secrets:
-  cf_dns_api_token:
-    external: true
-  traefik-dashboard-users:
-    external: true
 
 networks:
   traefik-net:
     external: true
-  redis-net:
-    driver: overlay
-    attachable: true
 
 volumes:
-  redis-data:
+  redis-data:  # 暂时保留，但 Traefik 不再使用
