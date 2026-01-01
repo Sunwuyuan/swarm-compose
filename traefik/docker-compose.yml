@@ -18,7 +18,7 @@ services:
       # Providers
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      # v3 中 swarmMode 被移除，使用 swarm provider 替代
+      # v3 中 swarmMode 被移除，使用 swarm provider
       - "--providers.swarm=true"
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
@@ -58,9 +58,16 @@ services:
 
     deploy:
       mode: global
-      placement:
-        constraints:
-          - node.role == worker
+      # 这里不加 constraints，让 Traefik 在所有节点部署（Manager + Worker）
+      # 如果希望 Manager 节点和 Worker 节点都部署，可省略 constraints
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
 
     networks:
       - traefik-net
