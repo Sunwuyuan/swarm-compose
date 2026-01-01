@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.52.0
+
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+
+    volumes:
+      - prometheus-data:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.monitoring == true
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.prom.rule=Host(`prometheus.swarm.wuyuan.dev`)"
+        - "traefik.http.routers.prom.entrypoints=websecure"
+        - "traefik.http.routers.prom.tls.certresolver=le"
+        - "traefik.http.services.prom.loadbalancer.server.port=9090"
+        - "traefik.http.routers.prom.middlewares=prom-auth"
+        - "traefik.http.middlewares.prom-auth.basicauth.usersfile=/run/secrets/prometheus-users"
+
+    secrets:
+      - prometheus-users
+
+    networks:
+      - monitor-net
+      - traefik-net
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    deploy:
+      mode: global
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - monitor-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    deploy:
+      mode: global
+    command:
+      - "--docker_only=true"
+      - "--housekeeping_interval=30s"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks:
+      - monitor-net
+
+volumes:
+  prometheus-data:
+
+secrets:
+  prometheus-users:
+    external: true
+
+networks:
+  monitor-net:
+    driver: overlay
+  traefik-net:
+    external: true
