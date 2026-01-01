@@ -9,7 +9,7 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=7d"
       - "--web.enable-lifecycle"
-
+      - "--web.listen-address=0.0.0.0:9090"   # 修改：监听所有网卡，避免 IP 报错
     volumes:
       - prometheus-data:/prometheus
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
