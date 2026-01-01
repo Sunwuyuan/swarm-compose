@@ -78,3 +78,7 @@ services:
 networks:
   traefik-net:
     external: true
+
+secrets:
+  traefik-dashboard-users:
+    external: true
