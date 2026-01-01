@@ -20,7 +20,6 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.swarmMode=true"
       - "--providers.docker.exposedbydefault=false"
-
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
 
@@ -32,12 +31,10 @@ services:
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entrypoint=metrics"
 
-      # ===== ACME（关键）=====
+      # ACME（使用 DNS + Consul 存储）
       - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
       - "--certificatesresolvers.le.acme.dnschallenge=true"
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
-
-      # ACME 使用 Consul 作为存储
       - "--certificatesresolvers.le.acme.storage=consul://consul:8500/traefik/acme"
 
     ports:
@@ -50,10 +47,10 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./dynamic:/etc/traefik/dynamic:ro
 
-    environment:
-      - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
+    configs:
+      - source: traefik-dynamic
+        target: /etc/traefik/dynamic/dashboard.yml
 
     secrets:
       - cf_dns_api_token
@@ -61,10 +58,16 @@ services:
 
     deploy:
       mode: global
-
+      placement:
+        constraints:
+          - node.role == worker  # 只在 worker 节点部署
 
     networks:
       - traefik-net
+
+configs:
+  traefik-dynamic:
+    file: ./dynamic/dashboard.yml  # Git 仓库里的动态配置文件
 
 secrets:
   cf_dns_api_token:
