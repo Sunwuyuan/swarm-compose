@@ -34,7 +34,7 @@ services:
       - /opt/1panel/docker/compose/traefik/acme.json:/acme.json  # ✅ 新增
 
     secrets:
-      - cf_dns_api_token
+      - cf_dns_api_token-1
       - traefik-dashboard-users
 
     deploy:
