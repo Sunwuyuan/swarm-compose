@@ -3,8 +3,14 @@ version: "3.8"
 services:
   consul:
     image: hashicorp/consul:1.16
-    command: >
-      sh -c "consul agent -server -bootstrap -ui -client=0.0.0.0 -bind=0.0.0.0 -advertise=127.0.0.1"
+    command:
+      - "agent"
+      - "-server"
+      - "-bootstrap"       # 单节点模式
+      - "-ui"              # 启用 UI
+      - "-client=0.0.0.0"  # 容器内部可访问
+      - "-bind=0.0.0.0"    # 监听所有容器网络接口
+      # 不再指定 advertise，Consul 会使用 Overlay 网络自动选择 IP
     deploy:
       replicas: 1
       placement:
@@ -14,11 +20,8 @@ services:
       - consul-data:/consul/data
     networks:
       - traefik-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.consul.rule=Host(`consul.swarm.wuyuan.dev`)"
-      - "traefik.http.routers.consul.entrypoints=websecure"
-      - "traefik.http.routers.consul.tls.certresolver=le"
+    # 不暴露端口到宿主机，只在 Overlay 网络内可访问
+    ports: []
 
 volumes:
   consul-data:
