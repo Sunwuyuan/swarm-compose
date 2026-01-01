@@ -12,7 +12,10 @@ services:
       - "--web.listen-address=0.0.0.0:9090"   # 修改：监听所有网卡，避免 IP 报错
     volumes:
       - prometheus-data:/prometheus
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+    configs:
+      - source: prometheus-config
+        target: /etc/prometheus/prometheus.yml
 
     deploy:
       replicas: 1
@@ -71,6 +74,10 @@ volumes:
 secrets:
   prometheus-users:
     external: true
+
+configs:
+  prometheus-config:
+    file: ./prometheus.yml
 
 networks:
   monitor-net:
