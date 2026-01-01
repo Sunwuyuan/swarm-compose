@@ -10,6 +10,7 @@ services:
       - "-ui"
       - "-client=0.0.0.0"
       - "-bind=0.0.0.0"
+      - "-advertise=100.64.13.72"
     deploy:
       replicas: 1
       placement:
