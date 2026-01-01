@@ -19,7 +19,6 @@ services:
       placement:
         constraints:
           - node.role == manager
-          - node.labels.monitoring == true
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.prom.rule=Host(`prometheus.swarm.wuyuan.dev`)"
