@@ -71,7 +71,7 @@ services:
         - "traefik.http.routers.traefik-https.tls.certresolver=le"  # ✅ 触发 ACME
 
         # Basic Auth 认证中间件
-        - "traefik.http.middlewares.auth.basicauth.users=wuyuan:$apr1$0KyK9v3d$ctbul7AxbO82CCcMaXmjs1"
+        - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$Atxwdnul$$KrEHt7Vc2S7fl8G6YcIjN."
 
         # 声明端口（可选，用于健康检查）
         - "traefik.http.services.traefik.loadbalancer.server.port=8080"
