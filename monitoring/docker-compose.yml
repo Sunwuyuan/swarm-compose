@@ -29,7 +29,7 @@ services:
         - "traefik.http.routers.prom.tls.certresolver=le"
         - "traefik.http.services.prom.loadbalancer.server.port=9090"
         - "traefik.http.routers.prom.middlewares=prom-auth"
-        - "traefik.http.middlewares.prom-auth.basicauth.usersfile=/run/secrets/prometheus-users"
+        - "traefik.http.middlewares.prom-auth.basicauth.users=admin:$$apr1$$Atxwdnul$$KrEHt7Vc2S7fl8G6YcIjN."
 
     secrets:
       - prometheus-users
@@ -71,9 +71,6 @@ services:
 volumes:
   prometheus-data:
 
-secrets:
-  prometheus-users:
-    external: true
 
 configs:
   prometheus-config:
