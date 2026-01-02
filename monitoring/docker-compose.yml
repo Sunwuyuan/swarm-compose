@@ -31,8 +31,6 @@ services:
         - "traefik.http.routers.prom.middlewares=prom-auth"
         - "traefik.http.middlewares.prom-auth.basicauth.users=admin:$$apr1$$Atxwdnul$$KrEHt7Vc2S7fl8G6YcIjN."
 
-    secrets:
-      - prometheus-users
 
     networks:
       - monitor-net
