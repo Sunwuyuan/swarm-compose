@@ -101,9 +101,8 @@ networks:
 
 volumes:
   acme-nfs:
-    driver: nfs
+    driver: local
     driver_opts:
-      addr: 100.64.13.72
-      export: /srv/nfs/swarm/acme
-      vers: 4
-      o: addr=100.64.13.72,vers=4,soft,timeo=180,bg,tcp
+      type: nfs
+      o: addr=100.64.13.72,vers=4,soft,timeo=180,bg,tcp,rw
+      device: ":/srv/nfs/swarm/acme"
