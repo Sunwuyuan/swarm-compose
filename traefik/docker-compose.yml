@@ -30,12 +30,12 @@ services:
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entrypoint=metrics"
 
-      # ACME（Cloudflare DNS-01 + Redis 存储）
+      # ACME（Cloudflare DNS-01 + NFS 存储）
       - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
       - "--certificatesresolvers.le.acme.dnschallenge=true"
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
       - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-      - "--certificatesresolvers.le.acme.storage=redis://redis:6379/0"
+      - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
 
     ports:
       - target: 80
@@ -47,12 +47,17 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme-nfs:/acme
 
     secrets:
       - cf_dns_api_token
 
     deploy:
-      mode: global
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
       labels:
         # ✅ 核心修复：启用 Traefik 自身服务
         - "traefik.enable=true"
@@ -65,11 +70,11 @@ services:
         - "traefik.http.routers.traefik-https.rule=Host(`traefik.swarm.192325.xyz`)"
         - "traefik.http.routers.traefik-https.entrypoints=websecure"
         - "traefik.http.routers.traefik-https.service=api@internal"
+        - "traefik.http.routers.traefik-https.middlewares=auth"
         - "traefik.http.routers.traefik-https.tls.certresolver=le"  # ✅ 触发 ACME
 
-        # 中间件定义
-        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-        - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+        # Basic Auth 认证中间件
+        - "traefik.http.middlewares.auth.basicauth.users=wuyuan:$apr1$0KyK9v3d$ctbul7AxbO82CCcMaXmjs1"
 
         # 声明端口（可选，用于健康检查）
         - "traefik.http.services.traefik.loadbalancer.server.port=8080"
@@ -86,29 +91,6 @@ services:
 
     networks:
       - traefik-net
-      - redis-net
-
-  redis:
-    image: redis:7-alpine
-    command: >
-      sh -c "redis-server --save '' --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-    volumes:
-      - redis-data:/data
-    networks:
-      - redis-net
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager  # 固定到 Manager 节点
-      restart_policy:
-        condition: on-failure
 
 secrets:
   cf_dns_api_token:
@@ -118,10 +100,13 @@ secrets:
 networks:
   traefik-net:
     external: true
-  redis-net:
-    driver: overlay
-    attachable: true
 
 
 volumes:
-  redis-data:
+  acme-nfs:
+    driver: nfs
+    driver_opts:
+      addr: nfs-server
+      export: /data/acme
+      vers: 4
+      o: addr=nfs-server,vers=4,soft,timeo=180,bg,tcp
