@@ -13,10 +13,6 @@ services:
       - "--entrypoints.websecure.http.tls.certresolver=le"
       - "--entrypoints.metrics.address=:8082"
 
-      # HTTPS 重定向
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-
       # Providers
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -64,6 +60,12 @@ services:
       labels:
         # ✅ 核心修复：启用 Traefik 自身服务
         - "traefik.enable=true"
+
+        # 全局 HTTP -> HTTPS 重定向 (兼容 Let's Encrypt)
+        - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+        - "traefik.http.routers.http-catchall.entrypoints=web"
+        - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
         # HTTP 到 HTTPS 重定向
         - "traefik.http.routers.traefik-http.rule=Host(`traefik.swarm.192325.xyz`)"

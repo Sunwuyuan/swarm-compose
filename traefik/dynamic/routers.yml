@@ -9,8 +9,6 @@ http:
       service: svc-154-37-221-120-17151
       middlewares:
         - forward-headers-154
-      tls:
-        certResolver: le
 
     # coderun-1.190823.xyz -> 10.163.231.8:3033
     route-coderun-1-190823-xyz:
@@ -123,9 +121,6 @@ http:
       service: svc-subc
       middlewares:
         - forward-headers-default
-        - content-replace-subc
-      tls:
-        certResolver: le
 
     # vw.wuyuan.dev -> 127.0.0.1:5658
     route-vw-wuyuan-dev:
@@ -322,9 +317,4 @@ http:
         customResponseHeaders:
           Strict-Transport-Security: "max-age=31536000"
 
-    # 内容替换中间件（subc用于替换响应中的文本）
-    content-replace-subc:
-      replacePath:
-        path: "/"
-      # 注：subc的sub_filter功能在Traefik中需要使用插件实现，
-      # 这里作为占位符，实际需要部署Traefik插件处理响应体替换
+
