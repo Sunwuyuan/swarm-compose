@@ -18,8 +18,6 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--providers.swarm=true"
       - "--providers.swarm.network=traefik-net"  # 明确指定网络
-      - "--providers.file.directory=/etc/traefik/dynamic"
-      - "--providers.file.watch=true"
 
       # Dashboard
       - "--api.dashboard=true"
@@ -29,12 +27,18 @@ services:
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entrypoint=metrics"
 
-      # ACME（Cloudflare DNS-01 + NFS 存储）
+      # ACME - DNS-01 (默认，支持通配符)
       - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
+      - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
       - "--certificatesresolvers.le.acme.dnschallenge=true"
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
       - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-      - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
+
+      # ACME - HTTP-01 (备用，不支持通配符)
+      - "--certificatesresolvers.le-http.acme.email=admin@wuyuan.dev"
+      - "--certificatesresolvers.le-http.acme.storage=/acme/acme.json"
+      - "--certificatesresolvers.le-http.acme.httpchallenge=true"
+      - "--certificatesresolvers.le-http.acme.httpchallenge.entrypoint=web"
 
     ports:
       - target: 80
@@ -47,7 +51,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - acme-nfs:/acme
-      - traefik-dynamic-nfs:/etc/traefik/dynamic
     environment:
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
@@ -115,10 +118,3 @@ volumes:
       type: nfs
       o: addr=100.64.13.72,vers=4,soft,timeo=180,bg,tcp,rw
       device: ":/srv/nfs/swarm/acme"
-
-  traefik-dynamic-nfs:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=100.64.13.72,vers=4,soft,timeo=180,bg,tcp,rw
-      device: ":/srv/nfs/swarm/traefik/dynamic"
