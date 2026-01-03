@@ -9,6 +9,8 @@ services:
       # EntryPoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certresolver=le"
       - "--entrypoints.metrics.address=:8082"
 
       # HTTPS 重定向
