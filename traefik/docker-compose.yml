@@ -14,8 +14,8 @@ services:
       - "--entrypoints.metrics.address=:8082"
 
       # Providers
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
+      #- "--providers.docker=true"
+      #- "--providers.docker.exposedbydefault=false"
       - "--providers.swarm=true"
       - "--providers.swarm.network=traefik-net" # 明确指定网络
 
