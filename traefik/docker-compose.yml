@@ -21,6 +21,7 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.swarm=true"
+      - "--providers.swarm.network=traefik-net"  # 明确指定网络
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
 
@@ -52,6 +53,8 @@ services:
       - acme-nfs:/acme
     environment:
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
+      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
+
     secrets:
       - cf_dns_api_token
 
