@@ -36,6 +36,12 @@ services:
       - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
       - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
 
+      # ACME - HTTP-01 (Separate resolver)
+      - "--certificatesresolvers.le-http.acme.email=admin@wuyuan.dev"
+      - "--certificatesresolvers.le-http.acme.storage=/acme/acme-http.json"
+      - "--certificatesresolvers.le-http.acme.httpchallenge=true"
+      - "--certificatesresolvers.le-http.acme.httpchallenge.entrypoint=web"
+
     ports:
       - target: 80
         published: 80
