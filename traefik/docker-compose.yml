@@ -48,38 +48,31 @@ services:
       mode: replicated
       replicas: 3
       labels:
+        # ✅ 核心修复：启用 Traefik 自身服务
         - "traefik.enable=true"
 
-        # =========================
-        # HTTP → HTTPS 全局重定向
-        # =========================
+        # 全局 HTTP -> HTTPS 重定向 (兼容 Let's Encrypt)
         - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
         - "traefik.http.routers.http-catchall.entrypoints=web"
         - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
-        - "traefik.http.routers.http-catchall.service=noop@internal" # ✅ 核心修复
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
-        # =========================
-        # Traefik Dashboard - HTTP
-        # =========================
+        # HTTP 到 HTTPS 重定向
         - "traefik.http.routers.traefik-http.rule=Host(`traefik.swarm.192325.xyz`)"
         - "traefik.http.routers.traefik-http.entrypoints=web"
-        - "traefik.http.routers.traefik-http.middlewares=redirect-to-https"
-        - "traefik.http.routers.traefik-http.service=noop@internal" # ✅ 必须
 
-        # =========================
-        # Traefik Dashboard - HTTPS
-        # =========================
+        # HTTPS 路由（Dashboard）
         - "traefik.http.routers.traefik-https.rule=Host(`traefik.swarm.192325.xyz`)"
         - "traefik.http.routers.traefik-https.entrypoints=websecure"
         - "traefik.http.routers.traefik-https.service=api@internal"
         - "traefik.http.routers.traefik-https.middlewares=auth"
-        - "traefik.http.routers.traefik-https.tls.certresolver=le"
+        - "traefik.http.routers.traefik-https.tls.certresolver=le"  # ✅ 触发 ACME
 
-        # =========================
-        # Basic Auth
-        # =========================
+        # Basic Auth 认证中间件
         - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$Atxwdnul$$KrEHt7Vc2S7fl8G6YcIjN."
+
+        # 声明端口（可选，用于健康检查）
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
       update_config:
         parallelism: 1
