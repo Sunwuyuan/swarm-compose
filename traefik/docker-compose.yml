@@ -17,7 +17,7 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.swarm=true"
-      - "--providers.swarm.network=traefik-net"  # 明确指定网络
+      - "--providers.swarm.network=traefik-net" # 明确指定网络
 
       # Dashboard
       - "--api.dashboard=true"
@@ -57,36 +57,42 @@ services:
 
     secrets:
       - cf_dns_api_token
-
     deploy:
       mode: replicated
       replicas: 3
       labels:
-        # ✅ 核心修复：启用 Traefik 自身服务
         - "traefik.enable=true"
 
-        # 全局 HTTP -> HTTPS 重定向 (兼容 Let's Encrypt)
+        # =========================
+        # HTTP → HTTPS 全局重定向
+        # =========================
         - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
         - "traefik.http.routers.http-catchall.entrypoints=web"
         - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+        - "traefik.http.routers.http-catchall.service=noop@internal" # ✅ 核心修复
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
-        # HTTP 到 HTTPS 重定向
+        # =========================
+        # Traefik Dashboard - HTTP
+        # =========================
         - "traefik.http.routers.traefik-http.rule=Host(`traefik.swarm.192325.xyz`)"
         - "traefik.http.routers.traefik-http.entrypoints=web"
+        - "traefik.http.routers.traefik-http.middlewares=redirect-to-https"
+        - "traefik.http.routers.traefik-http.service=noop@internal" # ✅ 必须
 
-        # HTTPS 路由（Dashboard）
+        # =========================
+        # Traefik Dashboard - HTTPS
+        # =========================
         - "traefik.http.routers.traefik-https.rule=Host(`traefik.swarm.192325.xyz`)"
         - "traefik.http.routers.traefik-https.entrypoints=websecure"
         - "traefik.http.routers.traefik-https.service=api@internal"
         - "traefik.http.routers.traefik-https.middlewares=auth"
-        - "traefik.http.routers.traefik-https.tls.certresolver=le"  # ✅ 触发 ACME
+        - "traefik.http.routers.traefik-https.tls.certresolver=le"
 
-        # Basic Auth 认证中间件
+        # =========================
+        # Basic Auth
+        # =========================
         - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$Atxwdnul$$KrEHt7Vc2S7fl8G6YcIjN."
-
-        # 声明端口（可选，用于健康检查）
-        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
       update_config:
         parallelism: 1
@@ -105,11 +111,9 @@ secrets:
   cf_dns_api_token:
     external: true
 
-
 networks:
   traefik-net:
     external: true
-
 
 volumes:
   acme-nfs:
