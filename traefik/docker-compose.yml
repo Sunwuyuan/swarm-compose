@@ -29,14 +29,14 @@ services:
 
       # ACME - DNS-01 (默认，支持通配符)
       - "--certificatesresolvers.le.acme.email=admin@wuyuan.dev"
-      - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
+      - "--certificatesresolvers.le.acme.storage=/acme/dns.json"
       - "--certificatesresolvers.le.acme.dnschallenge=true"
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
       - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
 
       # ACME - HTTP-01 (备用，不支持通配符)
       - "--certificatesresolvers.le-http.acme.email=admin@wuyuan.dev"
-      - "--certificatesresolvers.le-http.acme.storage=/acme/acme.json"
+      - "--certificatesresolvers.le-http.acme.storage=/acme/http.json"
       - "--certificatesresolvers.le-http.acme.httpchallenge=true"
       - "--certificatesresolvers.le-http.acme.httpchallenge.entrypoint=web"
 
