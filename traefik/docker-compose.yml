@@ -47,9 +47,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - acme-nfs:/acme
-    configs:
-      - source: traefik_dynamic
-        target: /etc/traefik/dynamic/routers.yml
+      - traefik-dynamic-nfs:/etc/traefik/dynamic
     environment:
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
@@ -118,6 +116,9 @@ volumes:
       o: addr=100.64.13.72,vers=4,soft,timeo=180,bg,tcp,rw
       device: ":/srv/nfs/swarm/acme"
 
-configs:
-  traefik_dynamic:
-    file: ./traefik_dynamic.yml
+  traefik-dynamic-nfs:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=100.64.13.72,vers=4,soft,timeo=180,bg,tcp,rw
+      device: ":/srv/nfs/swarm/traefik/dynamic"
