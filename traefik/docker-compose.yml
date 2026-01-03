@@ -47,6 +47,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - acme-nfs:/acme
+      - ./dynamic:/etc/traefik/dynamic
     environment:
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
